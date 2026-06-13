@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mi Cobro</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi Cobro">
+<link rel="apple-touch-icon" id="app-icon" href="icon.png">
+<script>
+(function(){
+  try{
+    var c=document.createElement('canvas');
+    c.width=180;c.height=180;
+    var x=c.getContext('2d');
+    x.fillStyle='#1a1814';
+    if(x.roundRect){ x.beginPath();x.roundRect(0,0,180,180,36);x.fill(); }
+    else{ x.fillRect(0,0,180,180); }
+    x.fillStyle='#ffffff';
+    x.font='bold 88px Arial';
+    x.textAlign='center';
+    x.textBaseline='middle';
+    x.fillText('\u20AC',90,95);
+    var el=document.getElementById('app-icon');
+    if(el) el.href=c.toDataURL('image/png');
+  }catch(e){}
+})();
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #f0ede8;
+  color: #1a1814;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  padding: 20px 12px 80px;
+}
+.app { max-width: 700px; margin: 0 auto; }
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.hdr h1 { font-size: 19px; font-weight: 700; }
+.hdr p  { font-size: 12px; color: #888; margin-top: 2px; }
+.mnav { display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #d8d4cc; border-radius: 10px; padding: 6px 8px; }
+.mnav button { background: none; border: none; font-size: 20px; padding: 0 8px; cursor: pointer; color: #333; -webkit-tap-highlight-color: transparent; }
+#mlabel { font-size: 14px; font-weight: 600; min-width: 128px; text-align: center; }
+
+/* Save */
+.savebar { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #888; margin-bottom: 10px; }
+.sdot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; display: inline-block; }
+.sdot.ok { background: #2a9a50; }
+.sdot.saving { background: #e06010; }
+
+/* Banners */
+.bnr { display: none; align-items: center; justify-content: space-between; border-radius: 6px; padding: 9px 12px; margin-bottom: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px; }
+.bnr.on { display: flex; }
+.bnr-copy { background: #6d28d9; color: #fff; }
+.bnr-multi { background: #0a5c30; color: #fff; }
+.bnr .bl { flex: 1; }
+.bnr .bbs { display: flex; gap: 7px; }
+.bnr button { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.35); color: #fff; border-radius: 4px; padding: 4px 11px; font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bnr button.ok { background: #fff; color: #0a5c30; }
+
+/* Legend */
+.lgd { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.lgd-i { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+.lgd-d { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* ── CALENDAR ── */
+.cal-wrap { background: #fff; border: 1px solid #d0ccc5; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+
+/* Header row using table-like layout */
+.cal-hdr { display: table; width: 100%; border-collapse: collapse; border-bottom: 1px solid #ddd; }
+.cal-hdr-row { display: table-row; }
+.cal-hdr-cell { display: table-cell; text-align: center; padding: 8px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #999; width: 14.285%; }
+.cal-hdr-cell.wknd { color: #c8440a; }
+
+/* Grid using table */
+.cal-tbl { display: table; width: 100%; border-collapse: collapse; }
+.cal-row { display: table-row; }
+.cal-cell {
+  display: table-cell;
+  width: 14.285%;
+  min-height: 68px;
+  height: 68px;
+  vertical-align: top;
+  border-right: 1px solid #e8e4de;
+  border-bottom: 1px solid #e8e4de;
+  padding: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.cal-cell:last-child { border-right: none; }
+.cal-row:last-child .cal-cell { border-bottom: none; }
+.cal-cell.empty { background: #ece9e3; cursor: default; pointer-events: none; }
+.cal-cell.q1 { background: #fafafa; }
+.cal-cell.q2 { background: #fdfdfb; }
+.cal-cell.worked.q1 { background: #deedf7; }
+.cal-cell.worked.q2 { background: #dff0e3; }
+.cal-cell.paste-t { outline: 2px dashed #7c3aed; outline-offset: -2px; background: #f0ebff; }
+.cal-cell.msel { outline: 2px solid #0a5c30; outline-offset: -2px; background: #d8f0e0; }
+
+.dn { font-size: 11px; font-weight: 700; color: #444; display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.dn.wk { color: #c8440a; }
+.cpb { background: transparent; border: none; font-size: 12px; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; color: #7c3aed; line-height: 1; }
+.chips { display: flex; flex-direction: column; gap: 2px; }
+.chip { font-size: 9px; font-weight: 600; padding: 1px 3px; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; }
+.ch { background: rgba(26,74,107,.13); color: #1a4a6b; }
+.q2 .ch { background: rgba(45,107,58,.13); color: #2d6b3a; }
+.ce { background: rgba(200,68,10,.11); color: #b83a00; }
+.cd { background: rgba(100,65,0,.10); color: #6a4400; }
+
+/* Quincenas */
+.qs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.qc { flex: 1; min-width: 130px; border-radius: 10px; padding: 16px; border: 1px solid #ccc; }
+.qc.c1 { background: linear-gradient(135deg,#dde8f3,#eef3f9); border-color: #b8cfe0; }
+.qc.c2 { background: linear-gradient(135deg,#dde8df,#eef3ef); border-color: #b8d8bc; }
+.qlbl { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 2px; }
+.c1 .qlbl { color: #1a4a6b; } .c2 .qlbl { color: #2d6b3a; }
+.qrng { font-size: 11px; color: #555; margin-bottom: 10px; }
+.qtot { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 8px; }
+.qbd { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,.09); }
+.qbr { display: flex; justify-content: space-between; font-size: 11px; color: #555; }
+.qbr .bv { font-weight: 700; color: #111; }
+.qst { font-size: 11px; color: #999; margin-top: 3px; }
+
+/* Buttons */
+.btns { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-bottom: 14px; }
+.btn { flex: 1; min-width: 130px; max-width: 220px; display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 9px; padding: 11px 14px; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; border: none; }
+@media(max-width:380px){ .btn { min-width: 100%; max-width: 100%; } }
+.btn-dk { background: #1a1814; color: #fff; }
+.btn-lt { background: #fff; color: #444; border: 1px solid #ccc !important; }
+
+/* Total card */
+.totcard { display: none; background: #1a1814; color: #fff; border-radius: 10px; padding: 22px; margin-bottom: 14px; }
+.totcard.on { display: block; }
+.tclbl { font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+.tcamt { font-size: 34px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px; }
+.tcrows { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.tcrow { font-size: 12px; color: rgba(255,255,255,.6); text-align: center; }
+.tcrow strong { display: block; font-size: 14px; color: #fff; margin-top: 2px; }
+
+/* Overlay + Modal */
+.ovl { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 200; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); align-items: center; justify-content: center; padding: 16px; }
+.ovl.on { display: flex; }
+.modal { background: #faf8f5; border: 1px solid #d0ccc5; border-radius: 14px; padding: 22px; width: 100%; max-width: 350px; max-height: 90vh; overflow-y: auto; }
+.mhd { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.mttl { font-size: 17px; font-weight: 700; }
+.mttl small { display: block; font-size: 12px; font-weight: 400; color: #888; margin-top: 2px; }
+.mxbtn { background: #e8e4de; border: none; width: 27px; height: 27px; border-radius: 50%; font-size: 16px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.mfld { margin-bottom: 13px; }
+.mfld label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #888; margin-bottom: 5px; }
+.irow { display: flex; align-items: stretch; background: #eceae5; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; }
+.irow input { flex: 1; border: none; background: transparent; padding: 9px 10px; font-size: 16px; color: #111; outline: none; -webkit-appearance: none; min-width: 0; }
+.irow span { padding: 0 10px; font-size: 12px; color: #888; border-left: 1px solid #ccc; background: #e2dfd9; display: flex; align-items: center; white-space: nowrap; }
+.dtog { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: #eceae5; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
+.dtog .tl { font-size: 13px; color: #444; display: flex; align-items: center; gap: 7px; }
+.tog { width: 36px; height: 20px; background: #bbb; border-radius: 10px; position: relative; flex-shrink: 0; }
+.tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s; }
+.tog.on { background: #c8440a; }
+.tog.on::after { transform: translateX(16px); }
+.damt { overflow: hidden; max-height: 0; opacity: 0; transition: max-height .2s, opacity .2s; }
+.damt.on { max-height: 70px; opacity: 1; margin-bottom: 12px; }
+.macts { display: flex; gap: 7px; }
+.mpbtn { flex: 1; background: #c8440a; color: #fff; border: none; border-radius: 6px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.msbtn { background: #e2dfd9; color: #444; border: 1px solid #ccc; border-radius: 6px; padding: 11px 12px; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* Multi preview */
+.sdp { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; max-height: 70px; overflow-y: auto; }
+.sdpc { font-size: 11px; background: rgba(45,107,58,.14); color: #2d6b3a; border-radius: 4px; padding: 3px 7px; font-weight: 600; }
+
+/* Backup */
+.bknote { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.5; }
+.bkta { width: 100%; height: 130px; background: #eceae5; border: 1px solid #ccc; border-radius: 6px; padding: 9px; font-size: 11px; color: #444; resize: none; outline: none; margin-bottom: 12px; font-family: monospace; }
+
+/* Toast */
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(14px); background: #111; color: #fff; padding: 9px 18px; border-radius: 18px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .22s, transform .22s; pointer-events: none; z-index: 999; white-space: nowrap; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media print { body { padding: 0; background: #fff; } .app > * { display: none !important; } #pdf-area { display: block !important; } }
+#pdf-area { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="hdr">
+  <div><h1>Calculadora de cobro</h1><p>Toca un día para registrar horas</p></div>
+  <div class="mnav">
+    <button id="btn-prev">&#8592;</button>
+    <span id="mlabel">...</span>
+    <button id="btn-next">&#8594;</button>
+  </div>
+</div>
+
+<div class="savebar"><span class="sdot" id="sdot"></span><span id="stxt">Los datos se guardan automáticamente</span></div>
+
+<div class="bnr bnr-multi" id="bnr-multi">
+  <div class="bl">&#9999;&#65039; <span id="multi-info">Toca los días que quieras editar</span></div>
+  <div class="bbs">
+    <button class="ok" id="multi-apply">Editar seleccionados</button>
+    <button id="multi-cancel">Cancelar</button>
+  </div>
+</div>
+<div class="bnr bnr-copy" id="bnr-copy">
+  <div class="bl">&#128203; <span id="copy-info">Día copiado — toca otro día para pegar</span></div>
+  <div class="bbs"><button id="copy-cancel">Cancelar</button></div>
+</div>
+
+<div class="lgd">
+  <div class="lgd-i"><span class="lgd-d" style="background:#1a4a6b"></span>1.ª quincena</div>
+  <div class="lgd-i"><span class="lgd-d" style="background:#2d6b3a"></span>2.ª quincena</div>
+  <div class="lgd-i"><span class="lgd-d" style="background:#6a4400"></span>Dieta</div>
+  <div class="lgd-i"><span class="lgd-d" style="background:#6d28d9"></span>Modo copia</div>
+</div>
+
+<div class="cal-wrap">
+  <div class="cal-hdr">
+    <div class="cal-hdr-row" id="cal-hdr-row"></div>
+  </div>
+  <div id="cal-body"></div>
+</div>
+
+<div class="qs">
+  <div class="qc c1">
+    <div class="qlbl">1.ª Quincena</div>
+    <div class="qrng" id="q1rng"></div>
+    <div class="qtot" id="q1tot">—</div>
+    <div class="qbd" id="q1bd"></div>
+  </div>
+  <div class="qc c2">
+    <div class="qlbl">2.ª Quincena</div>
+    <div class="qrng" id="q2rng"></div>
+    <div class="qtot" id="q2tot">—</div>
+    <div class="qbd" id="q2bd"></div>
+  </div>
+</div>
+
+<div class="btns">
+  <button class="btn btn-dk" id="btn-total">Ver total del mes</button>
+  <button class="btn btn-lt" id="btn-multi">&#9999;&#65039; Editar varios</button>
+  <button class="btn btn-lt" id="btn-pdf">&#128196; PDF</button>
+  <button class="btn btn-lt" id="btn-backup">&#128190; Guardar copia</button>
+  <label class="btn btn-lt" style="cursor:pointer">&#128257; Restaurar<input type="file" id="restore-input" accept=".json" style="display:none"></label>
+</div>
+<div class="totcard" id="totcard">
+  <div class="tclbl" id="tclbl">Total</div>
+  <div class="tcamt" id="tcamt"></div>
+  <div class="tcrows" id="tcrows"></div>
+</div>
+
+</div><!-- .app -->
+
+<!-- Day modal -->
+<div class="ovl" id="ovl-day">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mttl"><span id="m-name">Día</span><small id="m-sub"></small></div>
+      <button class="mxbtn" id="m-close">&#x2715;</button>
+    </div>
+    <div class="mfld"><label>Horas trabajadas</label>
+      <div class="irow"><input type="number" id="m-h" placeholder="0" min="0" max="24" step="0.5" inputmode="decimal"><span>h</span></div>
+    </div>
+    <div class="mfld"><label>Precio por hora</label>
+      <div class="irow"><input type="number" id="m-p" placeholder="0.00" min="0" step="0.01" inputmode="decimal"><span>€/h</span></div>
+    </div>
+    <div class="dtog" id="m-dtog"><div class="tl">&#127374; Dieta este día</div><div class="tog" id="m-togpill"></div></div>
+    <div class="damt" id="m-damt">
+      <div class="mfld" style="margin-bottom:0"><label>Importe dieta</label>
+        <div class="irow"><input type="number" id="m-d" placeholder="0.00" min="0" step="0.01" inputmode="decimal"><span>€</span></div>
+      </div>
+    </div>
+    <div class="macts">
+      <button class="mpbtn" id="m-save">Guardar</button>
+      <button class="msbtn" id="m-copy-btn">&#128203;</button>
+      <button class="msbtn" id="m-del">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Multi modal -->
+<div class="ovl" id="ovl-multi">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mttl"><span id="mm-name">Editar días</span><small id="mm-sub"></small></div>
+      <button class="mxbtn" id="mm-close">&#x2715;</button>
+    </div>
+    <div class="sdp" id="mm-prev"></div>
+    <div class="mfld"><label>Horas trabajadas</label>
+      <div class="irow"><input type="number" id="mm-h" placeholder="0" min="0" max="24" step="0.5" inputmode="decimal"><span>h</span></div>
+    </div>
+    <div class="mfld"><label>Precio por hora</label>
+      <div class="irow"><input type="number" id="mm-p" placeholder="0.00" min="0" step="0.01" inputmode="decimal"><span>€/h</span></div>
+    </div>
+    <div class="dtog" id="mm-dtog"><div class="tl">&#127374; Dieta estos días</div><div class="tog" id="mm-togpill"></div></div>
+    <div class="damt" id="mm-damt">
+      <div class="mfld" style="margin-bottom:0"><label>Importe dieta</label>
+        <div class="irow"><input type="number" id="mm-d" placeholder="0.00" min="0" step="0.01" inputmode="decimal"><span>€</span></div>
+      </div>
+    </div>
+    <div class="macts">
+      <button class="mpbtn" id="mm-save">Guardar todos</button>
+      <button class="msbtn" id="mm-del">Borrar todos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup modal -->
+<div class="ovl" id="ovl-bk">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mttl"><span>Copia de seguridad</span><small>Copia este texto en Notas</small></div>
+      <button class="mxbtn" id="bk-close">&#x2715;</button>
+    </div>
+    <p class="bknote" id="bk-note">Copia este texto y guárdalo.</p>
+    <textarea class="bkta" id="bk-ta" readonly></textarea>
+    <div class="macts">
+      <button class="mpbtn" id="bk-copy">Copiar todo</button>
+      <button class="msbtn" id="bk-close2">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdf-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+var CY = 2026, CM = 5;
+var days = {};
+var editKey = null, dietaOn = false, mmDOn = false;
+var clip = null, clipKey = null, pasteMode = false;
+var multiMode = false, msel = {};
+var svTimer = null, toastTimer = null;
+
+var MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var DAYNAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+var HDRS_LONG = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+var HDRS_SHORT = ['L','M','X','J','V','S','D'];
+
+function pad(n){ return n < 10 ? '0'+n : String(n); }
+function daysIn(y,m){ return new Date(y, m+1, 0).getDate(); }
+function firstDow(y,m){ var d=new Date(y,m,1).getDay(); return d===0?6:d-1; }
+function dkey(y,m,d){ return y+'-'+pad(m+1)+'-'+pad(d); }
+
+/* Format currency without relying on locale */
+function fmtEur(n){
+  var neg = n < 0;
+  var abs = Math.abs(n);
+  var cents = Math.round(abs * 100);
+  var euros = Math.floor(cents / 100);
+  var cPart = pad(cents % 100);
+  /* thousands separator */
+  var eStr = String(euros);
+  var parts = [];
+  while(eStr.length > 3){ parts.unshift(eStr.slice(-3)); eStr = eStr.slice(0,-3); }
+  parts.unshift(eStr);
+  return (neg?'-':'') + parts.join('.') + ',' + cPart + ' €';
+}
+function fmtH(n){
+  /* same but no symbol, for display */
+  var neg = n < 0;
+  var abs = Math.abs(n);
+  var cents = Math.round(abs * 100);
+  var euros = Math.floor(cents / 100);
+  var cPart = pad(cents % 100);
+  var eStr = String(euros);
+  var parts = [];
+  while(eStr.length > 3){ parts.unshift(eStr.slice(-3)); eStr = eStr.slice(0,-3); }
+  parts.unshift(eStr);
+  return (neg?'-':'') + parts.join('.') + ',' + cPart + ' €';
+}
+
+/* ── LocalStorage ── */
+var LS = 'cobro_v5';
+function saveData(){
+  clearTimeout(svTimer);
+  setDot('saving');
+  svTimer = setTimeout(function(){
+    try{
+      localStorage.setItem(LS, JSON.stringify({days:days,y:CY,m:CM}));
+      setDot('ok');
+    }catch(e){ setDot(''); }
+  }, 500);
+}
+function loadData(){
+  try{
+    var raw = localStorage.getItem(LS);
+    if(!raw){
+      /* try older keys */
+      var keys = ['cobro_data_v3','cobro_data_v2','cobro_v4'];
+      for(var i=0;i<keys.length;i++){
+        var r2 = localStorage.getItem(keys[i]);
+        if(r2){ var o=JSON.parse(r2); if(o.days) days=o.days; if(o.curYear||o.y) CY=o.curYear||o.y; if(typeof(o.curMonth||o.m)==='number') CM=o.curMonth||o.m; saveData(); break; }
+      }
+      return;
+    }
+    var obj = JSON.parse(raw);
+    if(obj.days) days = obj.days;
+    if(obj.y) CY = obj.y;
+    if(typeof obj.m === 'number') CM = obj.m;
+    setDot('ok');
+    document.getElementById('stxt').textContent = 'Datos cargados';
+    setTimeout(function(){ document.getElementById('stxt').textContent='Los datos se guardan automáticamente'; }, 2500);
+  }catch(e){}
+}
+function setDot(s){
+  var d = document.getElementById('sdot');
+  d.className = 'sdot' + (s?' '+s:'');
+}
+
+/* ── Toast ── */
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+}
+
+/* ── Render ── */
+function render(){
+  document.getElementById('mlabel').textContent = MONTHS[CM]+' '+CY;
+  renderCal();
+  renderQs();
+  document.getElementById('totcard').classList.remove('on');
+  document.getElementById('btn-total').style.display = '';
+}
+
+function renderCal(){
+  /* Header */
+  var hrow = document.getElementById('cal-hdr-row');
+  hrow.innerHTML = '';
+  /* detect narrow */
+  var narrow = (window.innerWidth < 400);
+  for(var i=0;i<7;i++){
+    var hc = document.createElement('div');
+    hc.className = 'cal-hdr-cell' + (i>=5?' wknd':'');
+    hc.textContent = narrow ? HDRS_SHORT[i] : HDRS_LONG[i];
+    hrow.appendChild(hc);
+  }
+
+  /* Body: build rows */
+  var body = document.getElementById('cal-body');
+  body.innerHTML = '';
+  var total = daysIn(CY, CM);
+  var first = firstDow(CY, CM);
+
+  /* flatten all cells */
+  var cells = [];
+  for(var e=0;e<first;e++) cells.push(null);
+  for(var d=1;d<=total;d++) cells.push(d);
+  /* pad to multiple of 7 */
+  while(cells.length % 7 !== 0) cells.push(null);
+
+  /* build table rows */
+  var tbl = document.createElement('div');
+  tbl.className = 'cal-tbl';
+
+  for(var r=0; r<cells.length; r+=7){
+    var row = document.createElement('div');
+    row.className = 'cal-row';
+    for(var c=0;c<7;c++){
+      var day = cells[r+c];
+      var cell = document.createElement('div');
+
+      if(day === null){
+        cell.className = 'cal-cell empty';
+      } else {
+        var k = dkey(CY,CM,day);
+        var en = days[k];
+        var dow = new Date(CY,CM,day).getDay();
+        var isWk = (dow===0||dow===6);
+        var isQ1 = day <= 15;
+        var isSel = multiMode && msel[k];
+        var cls = 'cal-cell ' + (isQ1?'q1':'q2');
+        if(en) cls += ' worked';
+        if(pasteMode && !en) cls += ' paste-t';
+        if(isSel) cls += ' msel';
+        cell.className = cls;
+
+        /* day number row */
+        var dn = document.createElement('div');
+        dn.className = 'dn' + (isWk?' wk':'');
+        var numSpan = document.createElement('span');
+        numSpan.textContent = day;
+        dn.appendChild(numSpan);
+        if(en){
+          var cpb = document.createElement('button');
+          cpb.className = 'cpb';
+          cpb.textContent = '\u2398';
+          (function(kk, ee, dd){ cpb.addEventListener('click', function(ev){ ev.stopPropagation(); doCopy(kk,ee,dd); }); })(k,en,day);
+          dn.appendChild(cpb);
+        }
+        cell.appendChild(dn);
+
+        /* chips */
+        if(en && en.horas > 0){
+          var chipsDiv = document.createElement('div');
+          chipsDiv.className = 'chips';
+          var c1 = document.createElement('span');
+          c1.className='chip ch'; c1.textContent=en.horas+'h';
+          chipsDiv.appendChild(c1);
+          if(en.precio > 0){
+            var c2 = document.createElement('span');
+            c2.className='chip ce'; c2.textContent=fmtEur(en.horas*en.precio);
+            chipsDiv.appendChild(c2);
+          }
+          if(en.dieta && en.dietaAmt > 0){
+            var c3 = document.createElement('span');
+            c3.className='chip cd'; c3.textContent=fmtEur(en.dietaAmt);
+            chipsDiv.appendChild(c3);
+          }
+          cell.appendChild(chipsDiv);
+        }
+
+        (function(dd2,kk2){ cell.addEventListener('click', function(){
+          if(pasteMode){ doPaste(kk2,dd2); }
+          else if(multiMode){
+            if(msel[kk2]) delete msel[kk2]; else msel[kk2]=dd2;
+            var cnt=Object.keys(msel).length;
+            document.getElementById('multi-info').textContent = cnt===0?'Toca los días que quieras editar':cnt+' día'+(cnt===1?' seleccionado':' seleccionados');
+            renderCal();
+          }
+          else openModal(dd2,kk2);
+        }); })(day,k);
+      }
+
+      row.appendChild(cell);
+    }
+    tbl.appendChild(row);
+  }
+  body.appendChild(tbl);
+}
+
+/* ── Quincenas ── */
+function calcQ(from,to){
+  var h=0,base=0,dieta=0,nd=0;
+  for(var d=from;d<=to;d++){
+    var e=days[dkey(CY,CM,d)];
+    if(e&&e.horas>0){ h+=e.horas; base+=e.horas*e.precio; dieta+=e.dieta?e.dietaAmt:0; nd++; }
+  }
+  return{h:h,base:base,dieta:dieta,total:base+dieta,nd:nd};
+}
+function renderQs(){
+  var last=daysIn(CY,CM);
+  var q1=calcQ(1,15), q2=calcQ(16,last);
+  document.getElementById('q1rng').textContent='1 al 15 de '+MONTHS[CM];
+  document.getElementById('q2rng').textContent='16 al '+last+' de '+MONTHS[CM];
+  fillQ(q1,'q1tot','q1bd');
+  fillQ(q2,'q2tot','q2bd');
+}
+function fillQ(q,tid,bid){
+  var tel=document.getElementById(tid), bel=document.getElementById(bid);
+  if(q.nd===0){ tel.textContent='—'; bel.innerHTML='<div class="qst">Sin días registrados</div>'; return; }
+  tel.textContent=fmtH(q.total);
+  var h='<div class="qbr"><span>Días</span><span class="bv">'+q.nd+'</span></div>'
+    +'<div class="qbr"><span>Horas</span><span class="bv">'+q.h+' h</span></div>'
+    +'<div class="qbr"><span>Subtotal</span><span class="bv">'+fmtEur(q.base)+'</span></div>';
+  if(q.dieta>0) h+='<div class="qbr"><span>Dietas</span><span class="bv">+'+fmtEur(q.dieta)+'</span></div>';
+  bel.innerHTML=h;
+}
+
+/* ── Day modal ── */
+function openModal(day,k){
+  editKey=k;
+  var en=days[k];
+  var dow=new Date(CY,CM,day).getDay();
+  document.getElementById('m-name').textContent=DAYNAMES[dow]+' '+day;
+  document.getElementById('m-sub').textContent=MONTHS[CM]+' '+CY;
+  document.getElementById('m-h').value=en?en.horas:'';
+  document.getElementById('m-p').value=en?en.precio:'';
+  document.getElementById('m-d').value=en?(en.dietaAmt||''):'';
+  dietaOn=en?!!en.dieta:false;
+  document.getElementById('m-togpill').className='tog'+(dietaOn?' on':'');
+  document.getElementById('m-damt').className='damt'+(dietaOn?' on':'');
+  document.getElementById('m-copy-btn').style.display=en?'':'none';
+  document.getElementById('ovl-day').classList.add('on');
+  document.getElementById('m-h').focus();
+}
+function closeModal(){ document.getElementById('ovl-day').classList.remove('on'); editKey=null; }
+
+document.getElementById('m-dtog').addEventListener('click',function(){
+  dietaOn=!dietaOn;
+  document.getElementById('m-togpill').className='tog'+(dietaOn?' on':'');
+  document.getElementById('m-damt').className='damt'+(dietaOn?' on':'');
+});
+document.getElementById('m-close').addEventListener('click',closeModal);
+document.getElementById('ovl-day').addEventListener('click',function(ev){ if(ev.target===this) closeModal(); });
+document.getElementById('m-save').addEventListener('click',function(){
+  var h=parseFloat(document.getElementById('m-h').value)||0;
+  var p=parseFloat(document.getElementById('m-p').value)||0;
+  var da=parseFloat(document.getElementById('m-d').value)||0;
+  if(h>0) days[editKey]={horas:h,precio:p,dieta:dietaOn,dietaAmt:dietaOn?da:0};
+  else delete days[editKey];
+  closeModal(); saveData(); render();
+});
+document.getElementById('m-del').addEventListener('click',function(){ delete days[editKey]; closeModal(); saveData(); render(); });
+document.getElementById('m-copy-btn').addEventListener('click',function(){
+  var en=days[editKey]; if(!en) return;
+  var day=parseInt(editKey.split('-')[2],10);
+  closeModal(); doCopy(editKey,en,day);
+});
+
+/* ── Copy/Paste ── */
+function doCopy(k,en,day){
+  clip={horas:en.horas,precio:en.precio,dieta:en.dieta,dietaAmt:en.dietaAmt};
+  clipKey=k; pasteMode=true;
+  var dow=new Date(CY,CM,day).getDay();
+  document.getElementById('copy-info').textContent='Copiado: '+DAYNAMES[dow]+' '+day+' — toca otro día para pegar';
+  document.getElementById('bnr-copy').classList.add('on');
+  renderCal();
+}
+function doPaste(k,day){
+  if(!clip) return;
+  days[k]={horas:clip.horas,precio:clip.precio,dieta:clip.dieta,dietaAmt:clip.dietaAmt};
+  toast('Pegado en el día '+day); saveData(); renderCal(); renderQs();
+}
+function cancelCopy(){ clip=null; clipKey=null; pasteMode=false; document.getElementById('bnr-copy').classList.remove('on'); renderCal(); }
+document.getElementById('copy-cancel').addEventListener('click',cancelCopy);
+
+/* ── Multi ── */
+document.getElementById('btn-multi').addEventListener('click',function(){
+  multiMode=true; msel={};
+  document.getElementById('bnr-multi').classList.add('on');
+  document.getElementById('multi-info').textContent='Toca los días que quieras editar';
+  renderCal();
+});
+function cancelMulti(){ multiMode=false; msel={}; document.getElementById('bnr-multi').classList.remove('on'); renderCal(); }
+document.getElementById('multi-cancel').addEventListener('click',cancelMulti);
+document.getElementById('multi-apply').addEventListener('click',function(){
+  var keys=Object.keys(msel);
+  if(!keys.length){ toast('Selecciona al menos un día'); return; }
+  keys.sort(function(a,b){ return msel[a]-msel[b]; });
+  var prev=document.getElementById('mm-prev'); prev.innerHTML='';
+  keys.forEach(function(k){
+    var ch=document.createElement('div'); ch.className='sdpc';
+    var d=msel[k]; var dow=new Date(CY,CM,d).getDay();
+    ch.textContent=DAYNAMES[dow].substring(0,3)+' '+d; prev.appendChild(ch);
+  });
+  document.getElementById('mm-name').textContent='Editar '+keys.length+' día'+(keys.length===1?'':'s');
+  document.getElementById('mm-sub').textContent=MONTHS[CM]+' '+CY;
+  document.getElementById('mm-h').value=''; document.getElementById('mm-p').value=''; document.getElementById('mm-d').value='';
+  mmDOn=false;
+  document.getElementById('mm-togpill').className='tog';
+  document.getElementById('mm-damt').className='damt';
+  document.getElementById('ovl-multi').classList.add('on');
+  document.getElementById('mm-h').focus();
+});
+document.getElementById('mm-dtog').addEventListener('click',function(){
+  mmDOn=!mmDOn;
+  document.getElementById('mm-togpill').className='tog'+(mmDOn?' on':'');
+  document.getElementById('mm-damt').className='damt'+(mmDOn?' on':'');
+});
+document.getElementById('mm-close').addEventListener('click',function(){ document.getElementById('ovl-multi').classList.remove('on'); });
+document.getElementById('ovl-multi').addEventListener('click',function(ev){ if(ev.target===this) this.classList.remove('on'); });
+document.getElementById('mm-save').addEventListener('click',function(){
+  var h=parseFloat(document.getElementById('mm-h').value)||0;
+  var p=parseFloat(document.getElementById('mm-p').value)||0;
+  var da=parseFloat(document.getElementById('mm-d').value)||0;
+  if(h<=0){ toast('Introduce las horas'); return; }
+  var keys=Object.keys(msel);
+  keys.forEach(function(k){ days[k]={horas:h,precio:p,dieta:mmDOn,dietaAmt:mmDOn?da:0}; });
+  document.getElementById('ovl-multi').classList.remove('on');
+  cancelMulti(); saveData(); render();
+  toast(keys.length+' día'+(keys.length===1?' guardado':' días guardados'));
+});
+document.getElementById('mm-del').addEventListener('click',function(){
+  var keys=Object.keys(msel);
+  keys.forEach(function(k){ delete days[k]; });
+  document.getElementById('ovl-multi').classList.remove('on');
+  cancelMulti(); saveData(); render();
+  toast(keys.length+' día'+(keys.length===1?' borrado':' días borrados'));
+});
+
+/* ── Total ── */
+document.getElementById('btn-total').addEventListener('click',function(){
+  var last=daysIn(CY,CM);
+  var q1=calcQ(1,15), q2=calcQ(16,last);
+  var total=q1.total+q2.total;
+  document.getElementById('tclbl').textContent='Total '+MONTHS[CM]+' '+CY;
+  document.getElementById('tcamt').textContent=fmtH(total);
+  document.getElementById('tcrows').innerHTML=
+    '<div class="tcrow">1.ª Quincena<strong>'+(q1.nd>0?fmtEur(q1.total):'—')+'</strong></div>'
+    +'<div class="tcrow" style="color:rgba(255,255,255,.3);font-size:18px;align-self:center">+</div>'
+    +'<div class="tcrow">2.ª Quincena<strong>'+(q2.nd>0?fmtEur(q2.total):'—')+'</strong></div>';
+  document.getElementById('totcard').classList.add('on');
+  document.getElementById('btn-total').style.display='none';
+});
+
+/* ── Nav ── */
+document.getElementById('btn-prev').addEventListener('click',function(){ CM--; if(CM<0){CM=11;CY--;} saveData(); render(); });
+document.getElementById('btn-next').addEventListener('click',function(){ CM++; if(CM>11){CM=0;CY++;} saveData(); render(); });
+
+/* ── PDF ── */
+document.getElementById('btn-pdf').addEventListener('click',function(){
+  var last=daysIn(CY,CM); var q1=calcQ(1,15),q2=calcQ(16,last); var total=q1.total+q2.total;
+  function rows(from,to){ var r=''; for(var d=from;d<=to;d++){ var k=dkey(CY,CM,d),e=days[k]; if(e&&e.horas>0){ var dw=new Date(CY,CM,d).getDay(); r+='<tr><td>'+DAYNAMES[dw].substr(0,3)+' '+d+'</td><td>'+e.horas+'h</td><td>'+fmtEur(e.precio)+'/h</td><td>'+fmtEur(e.horas*e.precio)+'</td><td>'+(e.dieta&&e.dietaAmt>0?fmtEur(e.dietaAmt):'-')+'</td><td>'+fmtEur(e.horas*e.precio+(e.dieta?e.dietaAmt:0))+'</td></tr>'; } } return r||'<tr><td colspan="6" style="color:#aaa;text-align:center">Sin días</td></tr>'; }
+  document.getElementById('pdf-area').innerHTML='<style>body{font-family:Arial,sans-serif;color:#111;padding:28px}h2{margin-bottom:4px}p{color:#888;font-size:13px;margin-bottom:24px}h3{font-size:13px;text-transform:uppercase;color:#555;margin:20px 0 8px;border-bottom:2px solid #eee;padding-bottom:5px}table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}th{text-align:left;padding:6px 8px;background:#f5f5f5;font-size:11px;text-transform:uppercase}td{padding:6px 8px;border-bottom:1px solid #eee}.tf td{font-weight:700;background:#f9f9f7}.sum{display:flex;gap:16px;margin-top:20px}.sc{flex:1;background:#f5f5f5;border-radius:6px;padding:14px}.sc h4{font-size:10px;text-transform:uppercase;color:#888;margin-bottom:4px}.sc .v{font-size:20px;font-weight:700}.dark{background:#111}.dark h4{color:rgba(255,255,255,.5)}.dark .v{color:#fff}</style><h2>Informe de cobro</h2><p>'+MONTHS[CM]+' '+CY+'</p><h3>1.ª Quincena — 1 al 15</h3><table><thead><tr><th>Día</th><th>Horas</th><th>Precio</th><th>Subtotal</th><th>Dieta</th><th>Total</th></tr></thead><tbody>'+rows(1,15)+'</tbody><tfoot class="tf"><tr><td colspan="3">Total Q1</td><td>'+fmtEur(q1.base)+'</td><td>'+fmtEur(q1.dieta)+'</td><td>'+fmtEur(q1.total)+'</td></tr></tfoot></table><h3>2.ª Quincena — 16 al '+last+'</h3><table><thead><tr><th>Día</th><th>Horas</th><th>Precio</th><th>Subtotal</th><th>Dieta</th><th>Total</th></tr></thead><tbody>'+rows(16,last)+'</tbody><tfoot class="tf"><tr><td colspan="3">Total Q2</td><td>'+fmtEur(q2.base)+'</td><td>'+fmtEur(q2.dieta)+'</td><td>'+fmtEur(q2.total)+'</td></tr></tfoot></table><div class="sum"><div class="sc"><h4>1.ª Quincena</h4><div class="v">'+fmtEur(q1.total)+'</div></div><div class="sc"><h4>2.ª Quincena</h4><div class="v">'+fmtEur(q2.total)+'</div></div><div class="sc dark"><h4>Total mes</h4><div class="v">'+fmtEur(total)+'</div></div></div>';
+  setTimeout(function(){ window.print(); },80);
+});
+
+/* ── Backup ── */
+document.getElementById('btn-backup').addEventListener('click',function(){
+  var ms={}; Object.keys(days).forEach(function(k){ ms[k.substring(0,7)]=1; });
+  var nd=Object.keys(days).length, nm=Object.keys(ms).length;
+  var obj={version:5,exportDate:new Date().toISOString(),totalDias:nd,totalMeses:nm,days:days};
+  var json=JSON.stringify(obj,null,2);
+  var hoy=new Date();
+  var fn='cobro_'+hoy.getFullYear()+pad(hoy.getMonth()+1)+pad(hoy.getDate())+'.json';
+  if(navigator.share&&navigator.canShare){
+    var file=new File([json],fn,{type:'application/json'});
+    if(navigator.canShare({files:[file]})){ navigator.share({title:'Copia cobro',files:[file]}).catch(function(){}); return; }
+  }
+  try{
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=fn;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); toast('Copia guardada');
+  }catch(e){
+    document.getElementById('bk-note').textContent=nm+' meses, '+nd+' días. Copia y guarda en Notas.';
+    document.getElementById('bk-ta').value=json;
+    document.getElementById('ovl-bk').classList.add('on');
+  }
+});
+document.getElementById('bk-copy').addEventListener('click',function(){
+  var ta=document.getElementById('bk-ta'); ta.select(); ta.setSelectionRange(0,999999);
+  if(navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function(){ toast('Copiado'); });
+  else{ document.execCommand('copy'); toast('Copiado'); }
+});
+document.getElementById('bk-close').addEventListener('click',function(){ document.getElementById('ovl-bk').classList.remove('on'); });
+document.getElementById('bk-close2').addEventListener('click',function(){ document.getElementById('ovl-bk').classList.remove('on'); });
+document.getElementById('ovl-bk').addEventListener('click',function(ev){ if(ev.target===this) this.classList.remove('on'); });
+
+/* ── Restore ── */
+document.getElementById('restore-input').addEventListener('change',function(ev){
+  var file=ev.target.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var obj=JSON.parse(e.target.result);
+      if(!obj.days) throw 'bad';
+      var ms={}; Object.keys(obj.days).forEach(function(k){ ms[k.substring(0,7)]=1; });
+      days=obj.days; saveData(); render();
+      toast('Restaurados '+Object.keys(days).length+' días de '+Object.keys(ms).length+' meses');
+    }catch(err){ toast('Error: archivo no válido'); }
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+});
+
+/* ── Init ── */
+loadData();
+render();
+</script>
+</body>
+</html>
