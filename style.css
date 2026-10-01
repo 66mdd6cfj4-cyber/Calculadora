@@ -1,0 +1,50 @@
+:root{--bg:#f3f1ec;--card:#fff;--tx:#1b2420;--mu:#6b756f;--ac:#0f5c4d;--ac2:#e6f2ee;--bd:#e2ded5;--bad:#c0392b;--warn:#b7791f}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101513;--card:#1a211e;--tx:#eef2ef;--mu:#93a09a;--ac:#4fd1b0;--ac2:#18332c;--bd:#2a3430;--bad:#ff7b6b;--warn:#f0b957}}
+:root[data-theme=dark]{--bg:#101513;--card:#1a211e;--tx:#eef2ef;--mu:#93a09a;--ac:#4fd1b0;--ac2:#18332c;--bd:#2a3430;--bad:#ff7b6b;--warn:#f0b957}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,"SF Pro Text",system-ui,sans-serif}
+main{padding:calc(env(safe-area-inset-top) + 14px) 14px calc(90px + env(safe-area-inset-bottom));max-width:640px;margin:auto}
+h2{font-size:26px;margin:4px 2px 12px;letter-spacing:-.4px}
+h3{margin:18px 2px 8px;font-size:17px}
+small,.mu{color:var(--mu);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:14px;margin-bottom:10px}
+.hero{background:var(--ac);color:#fff;border:0}
+:root[data-theme=dark] .hero,:root:not([data-theme=light]) .hero{color:#06231c}
+.hero small{color:inherit;opacity:.8}
+.big{font-size:44px;font-weight:700;letter-spacing:-1.5px;line-height:1.1;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid .card{margin:0}
+.n{font-size:23px;font-weight:650;font-variant-numeric:tabular-nums}
+.neg{color:var(--bad)}
+.alert{border-radius:14px;padding:11px 13px;margin-bottom:8px;background:#fff3d6;color:#6b4a00;font-size:14px}
+.alert.bad{background:#fde1dd;color:#7a1c12}
+.row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)}
+.row:last-child{border:0}
+.row .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.row small{display:block}
+.bar{height:8px;border-radius:4px;background:var(--ac2);margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac)}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--ac2);color:var(--ac);margin-right:4px}
+.pill.p{background:var(--bd);color:var(--mu)}
+.btn{display:block;width:100%;padding:15px;border:0;border-radius:14px;background:var(--ac);color:#fff;font-size:17px;font-weight:600;margin:8px 0}
+:root[data-theme=dark] .btn,:root:not([data-theme=light]) .btn{color:#06231c}
+.btn.sec{background:var(--ac2);color:var(--ac)}
+.btn.red{background:#fde1dd;color:#7a1c12}
+.acts{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:6px}
+.acts button{flex:1;min-width:70px;padding:10px 6px;border:0;border-radius:10px;background:var(--ac2);color:var(--ac);font-size:14px;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select{width:100%;padding:13px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx);font-size:17px;margin-top:4px}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0}
+#bal{font-size:34px;font-weight:700;border:0;background:transparent;padding:4px 0;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex!important;align-items:center;gap:6px;margin:0!important;background:var(--ac2);padding:8px 12px;border-radius:99px;color:var(--ac)!important;font-size:15px!important}
+.chip input{width:auto;margin:0}
+#sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end}
+#sheet[hidden]{display:none}
+.bk{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.pn{position:relative;background:var(--bg);width:100%;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
+#nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+#nav button{flex:1;border:0;background:none;color:var(--mu);padding:9px 0 7px;font-size:22px;display:flex;flex-direction:column;align-items:center}
+#nav button span{font-size:11px;margin-top:1px}
+#nav button.on{color:var(--ac);font-weight:700}
+svg text{fill:var(--mu);font-size:10px}
