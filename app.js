@@ -54,11 +54,14 @@ function occ(e,from,to){
 
 /* ============ 3. MOTOR DE CÁLCULO ============ */
 const spent = (name,c) => S.log.filter(l=>l.variable===name&&l.date>=c.start&&l.date<=c.end).reduce((s,l)=>s+l.amt,0);
+// Un cobro con fecha de hoy o anterior se considera YA cobrado (el saldo real ya lo refleja),
+// salvo que lo marques manualmente como pendiente (valor false).
+const isPaid=(id,d)=>{const v=S.paid[id+'|'+d];return v===undefined?d<=today():!!v;};
 // Ocurrencias con importe efectivo. Variable pendiente = presupuesto - gastado real en el ciclo
 function items(from,to){
   const c=cycle(), r=[];
   S.exp.forEach(e=>occ(e,from,to).forEach(d=>{
-    const paid=!!S.paid[e.id+'|'+d]; let amt=+e.amount;
+    const paid=isPaid(e.id,d); let amt=+e.amount;
     if(e.type==='variable'&&!paid&&d>=c.start&&d<=c.end) amt=Math.max(0,amt-spent(e.variable||e.name,c));
     r.push({e,date:d,paid,amt});
   }));
@@ -175,7 +178,7 @@ function ruleTxt(e){ return (REC[e.rec]||'')+(+e.rec?(e.rule==='last'?' · últi
 function vMov(){
   const k=calc(), far=k.c.end>k.np?k.c.end:k.np, y5=addDays(k.t,1825);
   const rows=S.exp.map(e=>{
-    const win=occ(e,k.c.start,far), un=win.filter(d=>!S.paid[e.id+'|'+d]);
+    const win=occ(e,k.c.start,far), un=win.filter(d=>!isPaid(e.id,d));
     const target=un[0]||null, nextD=target||occ(e,k.t,y5)[0]||null;
     return {e,win,target,nextD,st:win.length&&!un.length?'paid':'pend'};
   }).filter(r=>{const e=r.e;
@@ -194,7 +197,7 @@ function vMov(){
   ${rows.map(r=>`<div class="card"><div class="row" style="border:0;padding-top:0"><div><b>${esc(r.e.name)}</b><small>${esc(r.e.cat)} · ${r.e.type==='variable'?'Variable (presupuesto)':'Fijo'} · ${ruleTxt(r.e)}</small>${(r.e.tags||[]).map(t=>`<span class="pill">${esc(t)}</span>`).join('')}${r.e.variable?`<span class="pill p">${esc(r.e.variable)}</span>`:''}</div>
   <div class="r"><b>${eur(r.e.amount)}</b><small>${r.nextD?fmtD(r.target||r.nextD):'—'}</small>${r.win.length?`<span class="pill ${r.st==='paid'?'p':''}">${r.st==='paid'?'Pagado':'Pendiente'}</span>`:''}</div></div>
   <div class="acts"><button data-act="edit" data-id="${r.e.id}">Editar</button><button data-act="dup" data-id="${r.e.id}">Duplicar</button>
-  ${r.win.length?`<button data-act="pay" data-id="${r.e.id}">${r.target?'Marcar pagado':'Deshacer pago'}</button>`:''}<button data-act="del" data-id="${r.e.id}">Eliminar</button></div></div>`).join('')||'<div class="card"><small>No hay gastos. Pulsa “+ Añadir gasto”.</small></div>'}
+  ${r.win.length?`<button data-act="pay" data-id="${r.e.id}">${r.target?'Marcar pagado':'Marcar pendiente'}</button>`:''}<button data-act="del" data-id="${r.e.id}">Eliminar</button></div></div>`).join('')||'<div class="card"><small>No hay gastos. Pulsa “+ Añadir gasto”.</small></div>'}
   <h3>Gastos reales registrados</h3><div class="card">${S.log.slice().sort((a,b)=>a.date<b.date?1:-1).map(l=>`<div class="row"><div>${esc(l.name)}<small>${fmtD(l.date)} · ${esc(l.cat)}${l.variable?' · '+esc(l.variable):''}</small></div><div class="r">${eur(l.amt)}<small><a data-act="undoReal" data-id="${l.id}" style="color:var(--ac)">Deshacer</a> · <a data-act="editReal" data-id="${l.id}" style="color:var(--ac)">Editar</a></small></div></div>`).join('')||'<small>Ninguno todavía</small>'}</div>`;
 }
 
@@ -255,8 +258,8 @@ document.addEventListener('click',ev=>{
   else if(a==='edit')expForm(ex);
   else if(a==='dup'){const c=Object.assign({},ex,{id:uid(),name:ex.name+' (copia)',tags:[...(ex.tags||[])]});S.exp.push(c);render();expForm(c);}
   else if(a==='del'){if(confirm('¿Eliminar «'+ex.name+'»?')){S.exp=S.exp.filter(e=>e.id!==id);Object.keys(S.paid).forEach(p=>{if(p.startsWith(id+'|'))delete S.paid[p];});render();}}
-  else if(a==='pay'){const c=k(),far=c.c.end>c.np?c.c.end:c.np,w=occ(ex,c.c.start,far),un=w.filter(d=>!S.paid[id+'|'+d]);
-    if(un.length)S.paid[id+'|'+un[0]]=true; else delete S.paid[id+'|'+w[w.length-1]]; render();}
+  else if(a==='pay'){const c=k(),far=c.c.end>c.np?c.c.end:c.np,w=occ(ex,c.c.start,far),un=w.filter(d=>!isPaid(id,d));
+    if(un.length)S.paid[id+'|'+un[0]]=true; else S.paid[id+'|'+w[w.length-1]]=false; render();}
   else if(a==='saveExp'){
     const n=v('f_n').trim(); if(!n||!v('f_d')){alert('Indica nombre y fecha.');return;}
     const o={id:id||uid(),name:n,amount:num(v('f_a')),type:v('f_t'),date:v('f_d'),rule:v('f_r'),rec:+v('f_c'),cat:v('f_k'),variable:v('f_v').trim(),tags:[...document.querySelectorAll('.f_g:checked')].map(c=>c.value)};
